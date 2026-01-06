@@ -11,15 +11,21 @@ void calculateMetrics();  // blink rate, PERCLOS, etc.
 float computeFatigueScore();
 void renderUI(cv::Mat& img, float fatigue_score);
 
+bool loadCascades(cv::CascadeClassifier& face, cv::CascadeClassifier& eye)
+{
+    char buffer[512]; 
+    size_t requiredSize = 0;
+    getenv_s(&requiredSize, buffer, sizeof(buffer), "OPENCV_DATA_DIR");
+    std::string dir(buffer);
+    return face.load(dir + "/haarcascade_frontalface_default.xml") && eye.load(dir + "/haarcascade_eye.xml");
+} 
+
 void initializeCamera(cv::VideoCapture& cam) {
     cam.set(cv::CAP_PROP_FRAME_WIDTH, 640);
     cam.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
     cam.set(cv::CAP_PROP_FPS, 60);
 }
 
-bool loadCascades(cv::CascadeClassifier& face, cv::CascadeClassifier& eye) {
-    return face.load("haarcascade_frontalface_default.xml") && eye.load("haarcascade_eye.xml");
-}
 
 void detectFaces(cv::Mat& gray, std::vector<cv::Rect>& faces, cv::CascadeClassifier& face) {
     face.detectMultiScale(gray, faces);
