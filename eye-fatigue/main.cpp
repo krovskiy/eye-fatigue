@@ -42,6 +42,14 @@ void renderUI(cv::Mat& img, float fatigue_score) {
     cv::putText(img, text, cv::Point(10, img.rows - 10), cv::FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(0, 0, 255), 2);
 }
 
+bool analyzeEyeState(cv::Mat& eye_roi) {
+	cv::Mat thresh;
+    cv::threshold(eye_roi, thresh, 30, 255, cv::THRESH_BINARY);
+	double white_ratio = (double)cv::countNonZero(thresh) / (eye_roi.rows * eye_roi.cols);
+    bool result = (white_ratio >= 0.2) ? false : true;
+    return result;
+}
+
 int main() {
     cv::CascadeClassifier face, eye;
 	loadCascades(face, eye);
