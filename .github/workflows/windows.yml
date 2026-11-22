@@ -1,0 +1,16 @@
+﻿name: windows build
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: build and check the clock
+        shell: pwsh
+        run: ./scripts/test.ps1
