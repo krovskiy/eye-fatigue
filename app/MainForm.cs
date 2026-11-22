@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 
 namespace EyeFatigue;
 
@@ -11,10 +11,14 @@ internal sealed class MainForm : Form
     readonly System.Windows.Forms.Timer timer = new() { Interval = 500 };
     readonly NotifyIcon tray = new() { Icon = SystemIcons.Information, Text = "Eye fatigue reminders", Visible = true };
     readonly SplitContainer split = new() { Size = new Size(1000, 700), Dock = DockStyle.Fill, SplitterWidth = 7, Panel1MinSize = 280, Panel2MinSize = 400 };
-    readonly TabControl tabs = new() { Dock = DockStyle.Fill };
+    readonly Panel pages = new() { Dock = DockStyle.Fill };
+    readonly FlowLayoutPanel navigation = new() { Dock = DockStyle.Top, Height = 64, Padding = new Padding(20, 10, 0, 0), WrapContents = false };
+    readonly List<Panel> pageList = [];
+    readonly List<SoftButton> navButtons = [];
+    int selectedPage;
     readonly Label status = new(), time = new(), detail = new(), notice = new(), stats = new(), latest = new(), breakLegend = Label("■  Breaks marked done", 10, true), tiredLegend = Label("■  Eyes felt tired", 10, true);
-    readonly ProgressBar progress = new() { Minimum = 0, Maximum = 1000, Height = 20, Dock = DockStyle.Top, AccessibleName = "Time until your next break" };
-    readonly Button toggle = new(), reset = new(), tired = new(), done = new(), history = new();
+    readonly SoftProgress progress = new();
+    readonly SoftButton toggle = new(), reset = new(), tired = new(), done = new(), history = new();
     readonly NumericUpDown interval = new() { Minimum = 5, Maximum = 120, Width = 90 };
     readonly CheckBox dark = new() { Text = "Dark theme", AutoSize = true }, notifications = new() { Text = "Windows notifications", AutoSize = true };
     readonly ActivityGraph graph = new() { Dock = DockStyle.Fill };
@@ -61,8 +65,8 @@ internal sealed class MainForm : Form
     void BuildTimer()
     {
         var stack = Stack(); split.Panel1.Controls.Add(stack);
-        stack.Controls.Add(Label("EYE FATIGUE  /  WORKSPACE", 10, true)); stack.Controls.Add(Label("A little room\nto breathe.", 23, true));
-        stack.Controls.Add(Label("Your screen time companion", 10));
+        stack.Controls.Add(Label("◉   EYE FATIGUE", 12, true)); stack.Controls.Add(Label("Your break timer", 20, true));
+        stack.Controls.Add(Label("A little space for your eyes.", 10));
         status.AutoSize = true; status.Font = new Font("Segoe UI", 12, FontStyle.Bold); status.Margin = new Padding(0, 25, 0, 3); stack.Controls.Add(status);
         time.AutoSize = true; time.Font = new Font("Segoe UI", 38, FontStyle.Bold); time.Margin = new Padding(0, 0, 0, 10); stack.Controls.Add(time);
         progress.Width = 270; progress.Dock = DockStyle.None; stack.Controls.Add(progress);
@@ -74,11 +78,15 @@ internal sealed class MainForm : Form
     }
     void BuildTabs()
     {
-        split.Panel2.Controls.Add(tabs);
-        var overview = new TabPage("Overview"); var activity = new TabPage("Activity"); var preferences = new TabPage("Settings"); tabs.TabPages.AddRange([overview, activity, preferences]);
+        split.Panel2.Controls.Add(pages); split.Panel2.Controls.Add(navigation);
+        var overview = new Panel { Dock = DockStyle.Fill }; var activity = new Panel { Dock = DockStyle.Fill }; var preferences = new Panel { Dock = DockStyle.Fill };
+        pageList.AddRange([overview, activity, preferences]);
+        foreach (var page in pageList) pages.Controls.Add(page);
+        foreach (var title in new[] { "Overview", "Activity", "Settings" }) { var nav = new SoftButton { Text = title, Width = 110, Height = 40, Margin = new Padding(0, 0, 6, 0), AccessibleName = title }; int index = navButtons.Count; nav.Click += (_, _) => SelectPage(index); navButtons.Add(nav); navigation.Controls.Add(nav); }
+        SelectPage(0);
         var grid = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(24), ColumnCount = 1, RowCount = 5 };
         grid.RowStyles.Add(new RowStyle(SizeType.AutoSize)); grid.RowStyles.Add(new RowStyle(SizeType.AutoSize)); grid.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); grid.RowStyles.Add(new RowStyle(SizeType.AutoSize)); grid.RowStyles.Add(new RowStyle(SizeType.AutoSize)); overview.Controls.Add(grid);
-        grid.Controls.Add(Label("Your week at a glance", 22, true)); grid.Controls.Add(Label("A simple record of what you chose to log.", 10)); grid.Controls.Add(graph);
+        grid.Controls.Add(Label("Your week", 22, true)); grid.Controls.Add(Label("Your activity over the last 7 days", 10)); grid.Controls.Add(graph);
         var legend = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill }; legend.Controls.Add(breakLegend); legend.Controls.Add(tiredLegend); grid.Controls.Add(legend); stats.AutoSize = true; stats.Margin = new Padding(0, 8, 0, 0); grid.Controls.Add(stats);
         var activityGrid = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(24), ColumnCount = 1, RowCount = 4 };
         activityGrid.RowStyles.Add(new RowStyle(SizeType.AutoSize)); activityGrid.RowStyles.Add(new RowStyle(SizeType.AutoSize)); activityGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); activityGrid.RowStyles.Add(new RowStyle(SizeType.AutoSize)); activity.Controls.Add(activityGrid);
@@ -93,19 +101,19 @@ internal sealed class MainForm : Form
     }
     void ApplyTheme()
     {
-        bg = settings.Dark ? Color.FromArgb(17, 28, 33) : Color.FromArgb(238, 244, 241); panel = settings.Dark ? Color.FromArgb(24, 40, 45) : Color.White;
-        fg = settings.Dark ? Color.FromArgb(233, 242, 240) : Color.FromArgb(28, 52, 49); muted = settings.Dark ? Color.FromArgb(164, 188, 185) : Color.FromArgb(75, 102, 96); accent = Color.FromArgb(79, 203, 169);
+        bg = settings.Dark ? Color.FromArgb(35, 36, 40) : Color.FromArgb(235, 236, 241); panel = settings.Dark ? Color.FromArgb(43, 45, 49) : Color.White;
+        fg = settings.Dark ? Color.FromArgb(242, 243, 245) : Color.FromArgb(35, 38, 48); muted = settings.Dark ? Color.FromArgb(181, 186, 193) : Color.FromArgb(80, 84, 98); accent = settings.Dark ? Color.FromArgb(155, 163, 255) : Color.FromArgb(79, 86, 170);
         BackColor = bg; ForeColor = fg; ThemeControls(this); split.BackColor = bg; split.Panel1.BackColor = bg; split.Panel2.BackColor = panel;
-        graph.Dark = settings.Dark; graph.BackColor = panel; graph.Invalidate(); breakLegend.ForeColor = accent; tiredLegend.ForeColor = Color.FromArgb(255, 181, 112); time.ForeColor = accent; detail.ForeColor = muted; notice.ForeColor = muted; latest.ForeColor = muted;
-        toggle.BackColor = accent; toggle.ForeColor = Color.FromArgb(13, 45, 39);
+        graph.Dark = settings.Dark; graph.BackColor = panel; graph.Invalidate(); breakLegend.ForeColor = accent; tiredLegend.ForeColor = settings.Dark ? Color.FromArgb(255, 186, 128) : Color.FromArgb(145, 77, 28); time.ForeColor = accent; detail.ForeColor = muted; notice.ForeColor = muted; latest.ForeColor = muted;
+        toggle.BackColor = settings.Dark ? Color.FromArgb(88, 101, 242) : Color.FromArgb(79, 86, 170); toggle.ForeColor = Color.White; progress.Fill = accent; progress.Track = settings.Dark ? Color.FromArgb(65, 67, 74) : Color.FromArgb(220, 222, 231); progress.Invalidate(); RefreshNavigation();
     }
     void ThemeControls(Control c)
     {
         foreach (Control child in c.Controls)
         {
             child.ForeColor = fg;
-            if (child is TabPage || child is TableLayoutPanel || child is FlowLayoutPanel || child is ListView || child is NumericUpDown || child is ActivityGraph) child.BackColor = panel;
-            if (child is Button b) { b.BackColor = settings.Dark ? Color.FromArgb(38, 59, 63) : Color.FromArgb(229, 239, 235); b.ForeColor = fg; b.FlatAppearance.BorderColor = settings.Dark ? Color.FromArgb(70, 100, 98) : Color.FromArgb(180, 200, 194); }
+            if (child is Panel || child is TableLayoutPanel || child is FlowLayoutPanel || child is ListView || child is NumericUpDown || child is ActivityGraph) child.BackColor = panel;
+            if (child is Button b) { b.BackColor = settings.Dark ? Color.FromArgb(58, 60, 67) : Color.FromArgb(231, 232, 239); b.ForeColor = fg; b.FlatAppearance.BorderColor = settings.Dark ? Color.FromArgb(70, 100, 98) : Color.FromArgb(180, 200, 194); }
             ThemeControls(child);
         }
         split.Panel1.BackColor = bg;
@@ -115,7 +123,7 @@ internal sealed class MainForm : Form
     void ResetClock() { clock.Reset(settings.Interval); notified = false; Log("reset"); RefreshView(); }
     void RefreshView()
     {
-        int left = clock.Remaining; time.Text = $"{left / 60:00}:{left % 60:00}"; progress.Value = Math.Clamp((clock.IntervalSeconds - left) * 1000 / clock.IntervalSeconds, 0, 1000);
+        int left = clock.Remaining; time.Text = $"{left / 60:00}:{left % 60:00}"; progress.AccessibleDescription = $"{left / 60} minutes and {left % 60} seconds until your next break"; progress.Value = Math.Clamp((clock.IntervalSeconds - left) * 1000 / clock.IntervalSeconds, 0, 1000);
         status.Text = clock.Due ? "Time to look away" : clock.Running ? "Next break in" : "Paused · ready when you are"; toggle.Text = clock.Running ? "Pause" : "Start";
     }
     void Log(string action) { if (demo) return; if (store.Add(action)) entries.Insert(0, new Activity(DateTimeOffset.Now, action)); notice.Text = store.Error ?? ""; UpdateActivity(); }
@@ -132,10 +140,9 @@ internal sealed class MainForm : Form
     void OnKeyDown(object? sender, KeyEventArgs e)
     {
         if (!e.Control) return;
-        switch (e.KeyCode) { case Keys.D1: tabs.SelectedIndex = 0; break; case Keys.D2: tabs.SelectedIndex = 1; break; case Keys.D3: tabs.SelectedIndex = 2; break; case Keys.Space: Toggle(); break; case Keys.B: done.PerformClick(); break; case Keys.R: ResetClock(); break; default: return; }
+        switch (e.KeyCode) { case Keys.D1: SelectPage(0); break; case Keys.D2: SelectPage(1); break; case Keys.D3: SelectPage(2); break; case Keys.Space: Toggle(); break; case Keys.B: done.PerformClick(); break; case Keys.R: ResetClock(); break; default: return; }
         e.Handled = true; e.SuppressKeyPress = true;
     }
-    public void SelectPage(int index) => tabs.SelectedIndex = index;
+    public void SelectPage(int index) { selectedPage = index; for (int i = 0; i < pageList.Count; i++) pageList[i].Visible = i == index; RefreshNavigation(); }
+    void RefreshNavigation() { for (int i = 0; i < navButtons.Count; i++) { navButtons[i].BackColor = i == selectedPage ? (settings.Dark ? Color.FromArgb(75, 77, 86) : Color.FromArgb(222, 224, 235)) : panel; navButtons[i].ForeColor = fg; navButtons[i].Invalidate(); } navigation.BackColor = panel; pages.BackColor = panel; }
 }
-
-
