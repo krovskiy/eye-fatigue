@@ -1,28 +1,56 @@
 ﻿# eye fatigue
 
-A small Windows app to help you remember to take breaks from the screen. Start the timer, look away when it reminds you, and mark your break done when you are ready. You can also pause it or tell it your eyes feel tired.
+staring at a screen for a while? this app gives you a nudge to look away and take a break. it has a little workspace for your timer, activity and settings, and everything stays on your pc.
 
-The default is the 20-20-20 reminder: every 20 minutes, look about 20 feet (6 metres) away for 20 seconds. You can change the interval from 5 to 120 minutes. The progress bar shows time to the next reminder, not a measurement of your eyes.
+![Dashboard with sample activity](screenshots/dashboard.png)
+
+## what it does
+
+- reminds you to take a break (20 minutes by default, or pick 5–120)
+- lets you pause, reset, mark a break done or say your eyes feel tired
+- shows your last seven days of breaks and tired-eye reports in a graph
+- keeps a local activity list you can open as a csv
+- lets you resize the panes, switch themes and turn notifications on or off
+
+The graph counts what you logged; it doesn't measure eye fatigue. The screenshots use sample activity.
+
+![Activity with sample entries](screenshots/activity.png)
+![Settings](screenshots/settings.png)
 
 ## get started
 
-You need Windows and the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0). In PowerShell, from this folder:
+You need Windows and the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0). Open PowerShell in this folder and run:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run.ps1
 ```
 
-Press **Start** to begin. Windows may hide notifications when Do Not Disturb is on or notifications are disabled. Keep the app open for reminders; it does not run in the background after you close it. **Break done** starts the next interval. Changing the interval or resetting pauses the timer, so press Start again.
+Press **Start** when you're ready. The default reminder is to look about 20 feet (6 metres) away for 20 seconds. Press **Break done** when you're finished to start the next interval. Changing the interval or resetting pauses the timer, so press Start again.
 
-Build with `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build.ps1` or run the clock checks with `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1`. GitHub Actions builds and runs those checks on Windows for pushes and pull requests.
+Drag the divider to resize the panes. Your pane width, interval, theme and notification preference are saved for next time. Keep the app open for reminders; closing it stops the timer. Windows can also hide notifications when Do Not Disturb is on or notifications are disabled.
+
+| shortcut | action |
+| --- | --- |
+| Ctrl+1 / 2 / 3 | overview / activity / settings |
+| Ctrl+Space | start or pause |
+| Ctrl+B | mark break done |
+| Ctrl+R | reset timer |
 
 ## activity and privacy
 
-The latest action is shown in the app. Use **Open activity** to open the full history. A simple activity history is saved locally at `%LOCALAPPDATA%\EyeFatigue\activity.csv`; open it in a spreadsheet or text editor, and delete the file whenever you want. It contains timestamps and actions such as reminders, pauses and self-reported tired eyes. It does not contain images. No account or network connection is needed by the app. It does not currently use the camera.
+Activity and settings are stored in `%LOCALAPPDATA%\EyeFatigue\`. The activity tab shows the latest 100 entries, and **Open CSV** opens the full history. You can delete `activity.csv` whenever you want. It contains timestamps and actions such as reminders and self-reported tired eyes. The app doesn't use the camera or send your data anywhere.
 
-## what this can and cannot do
+## a quick note
 
-This is a wellness reminder, **not a medical device**, diagnosis, or a validated fatigue detector. The timer does not know whether you are looking at the screen or whether you took a break. The original OpenCV experiment in `eye-fatigue/` is separate from the app: detecting a face or failing to find an eye is not enough to determine eye closure or fatigue. It is not used to make health claims or trigger reminders. Camera-based detection needs validated landmarks, signal-quality checks, careful evaluation across users and conditions, and clinical review before it could support such claims.
+This is a wellness reminder, **not a medical device** or a validated fatigue detector. It can't tell whether you're looking at the screen or whether you took a break. The original OpenCV experiment in `eye-fatigue/` is separate from the app; finding a face or failing to find an eye isn't enough to determine eye closure or fatigue. It needs proper validation before it can support those claims.
 
-If symptoms persist or concern you, speak with an eye care professional. For the evidence behind these choices and its limits, see [research.md](research.md).
+If symptoms persist or worry you, speak with an eye care professional. The papers behind the reminder and its limits are in [research.md](research.md).
 
+## building and testing
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1
+```
+
+GitHub Actions runs the build and clock checks on Windows for pushes and pull requests. To refresh the screenshots with sample data, build first and run `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\screenshots.ps1` in an interactive Windows session.
